@@ -315,7 +315,7 @@ public final class LocalMediaPageLoader extends IBridgeMediaLoader {
                                         }
                                         media.recycle();
                                     }
-                                    // 累积每个相册的数量
+                                    // handle bucket count
                                     long bucketId = data.getLong(data.getColumnIndexOrThrow(COLUMN_BUCKET_ID));
                                     Long newCount = countMap.get(bucketId);
                                     if (newCount == null) {
@@ -325,7 +325,7 @@ public final class LocalMediaPageLoader extends IBridgeMediaLoader {
                                     }
                                     countMap.put(bucketId, newCount);
 
-                                    { // 生成文件夹对象
+                                    {  // read folder info
                                         if (bucketIdSet.contains(bucketId)) {
                                             continue;
                                         }
@@ -344,7 +344,6 @@ public final class LocalMediaPageLoader extends IBridgeMediaLoader {
                                     }
                                 }
 
-                                // 设置每个相册中的文件数量
                                 for (LocalMediaFolder mediaFolder : mediaFolders) {
                                     final int size = ValueOf.toInt(countMap.get(mediaFolder.getBucketId()));
                                     mediaFolder.setFolderTotalNum(size);
