@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.library'
 }
+apply plugin: 'com.vanniktech.maven.publish'
 
 android {
     compileSdkVersion 31
@@ -30,7 +31,7 @@ ext {
     PUBLISH_ARTIFACT_ID = "camerax"
 }
 
-apply from: '../publish.gradle'
+//apply from: '../publish.gradle'
 
 dependencies {
     api "androidx.camera:camera-core:1.2.0-alpha01"
