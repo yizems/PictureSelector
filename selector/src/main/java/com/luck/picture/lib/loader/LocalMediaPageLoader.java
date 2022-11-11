@@ -219,6 +219,53 @@ public final class LocalMediaPageLoader extends IBridgeMediaLoader {
         });
     }
 
+//    /**
+//     * 同步获取 文件夹中是否存在目标文件
+//     *
+//     * @param bucketId
+//     */
+//    private boolean checkBucketHasTargetMediaSync(long bucketId) {
+//        final int pageSize = 20;
+//        int page = 1;
+//        while (true) {
+//            Cursor data = null;
+//            try {
+//                if (SdkVersionUtils.isR()) {
+//                    Bundle queryArgs = MediaUtils.createQueryArgsBundle(getPageSelection(bucketId), getPageSelectionArgs(bucketId), pageSize, (page - 1) * pageSize, getSortOrder());
+//                    data = getContext().getContentResolver().query(QUERY_URI, PROJECTION, queryArgs, null);
+//                } else {
+//                    String orderBy = page == PictureConfig.ALL ? getSortOrder() : getSortOrder() + " limit " + pageSize + " offset " + (page - 1) * pageSize;
+//                    data = getContext().getContentResolver().query(QUERY_URI, PROJECTION, getPageSelection(bucketId), getPageSelectionArgs(bucketId), orderBy);
+//                }
+//
+//                if (data == null || data.getCount() == 0) {
+//                    return false;
+//                }
+//                data.moveToFirst();
+//                do {
+//                    LocalMedia media = parseLocalMedia(data, false);
+//                    if (media == null) {
+//                        continue;
+//                    }
+//                    return true;
+//                } while (data.moveToNext());
+//
+//                if (data.getCount() < pageSize) {
+//                    return false;
+//                }
+//                page++;
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                Log.i(TAG, "checkBucketHasTargetMediaSync Error: " + e.getMessage());
+//                return false;
+//            } finally {
+//                if (data != null && !data.isClosed()) {
+//                    data.close();
+//                }
+//            }
+//        }
+//    }
+
     @Override
     public void loadOnlyInAppDirAllMedia(OnQueryAlbumListener<LocalMediaFolder> query) {
         PictureThreadUtils.executeByIo(new PictureThreadUtils.SimpleTask<LocalMediaFolder>() {
@@ -259,6 +306,7 @@ public final class LocalMediaPageLoader extends IBridgeMediaLoader {
                         if (count > 0) {
                             if (isWithAllQuery()) {
                                 Map<Long, Long> countMap = new HashMap<>();
+                                Set<Long> bucketIdSet = new HashSet<>();
                                 while (data.moveToNext()) {
                                     if (getConfig().isPageSyncAsCount) {
                                         LocalMedia media = parseLocalMedia(data, true);
@@ -267,6 +315,7 @@ public final class LocalMediaPageLoader extends IBridgeMediaLoader {
                                         }
                                         media.recycle();
                                     }
+                                    // 累积每个相册的数量
                                     long bucketId = data.getLong(data.getColumnIndexOrThrow(COLUMN_BUCKET_ID));
                                     Long newCount = countMap.get(bucketId);
                                     if (newCount == null) {
@@ -275,12 +324,9 @@ public final class LocalMediaPageLoader extends IBridgeMediaLoader {
                                         newCount++;
                                     }
                                     countMap.put(bucketId, newCount);
-                                }
-                                if (data.moveToFirst()) {
-                                    Set<Long> hashSet = new HashSet<>();
-                                    do {
-                                        long bucketId = data.getLong(data.getColumnIndexOrThrow(COLUMN_BUCKET_ID));
-                                        if (hashSet.contains(bucketId)) {
+
+                                    { // 生成文件夹对象
+                                        if (bucketIdSet.contains(bucketId)) {
                                             continue;
                                         }
                                         LocalMediaFolder mediaFolder = new LocalMediaFolder();
@@ -288,19 +334,21 @@ public final class LocalMediaPageLoader extends IBridgeMediaLoader {
                                         String bucketDisplayName = data.getString(
                                                 data.getColumnIndexOrThrow(COLUMN_BUCKET_DISPLAY_NAME));
                                         String mimeType = data.getString(data.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE));
-                                        if (!countMap.containsKey(bucketId)) {
-                                            continue;
-                                        }
-                                        long size = countMap.get(bucketId);
+
                                         long id = data.getLong(data.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID));
                                         mediaFolder.setFolderName(bucketDisplayName);
-                                        mediaFolder.setFolderTotalNum(ValueOf.toInt(size));
                                         mediaFolder.setFirstImagePath(MediaUtils.getRealPathUri(id, mimeType));
                                         mediaFolder.setFirstMimeType(mimeType);
                                         mediaFolders.add(mediaFolder);
-                                        hashSet.add(bucketId);
-                                        totalCount += size;
-                                    } while (data.moveToNext());
+                                        bucketIdSet.add(bucketId);
+                                    }
+                                }
+
+                                // 设置每个相册中的文件数量
+                                for (LocalMediaFolder mediaFolder : mediaFolders) {
+                                    final int size = ValueOf.toInt(countMap.get(mediaFolder.getBucketId()));
+                                    mediaFolder.setFolderTotalNum(size);
+                                    totalCount += size;
                                 }
                             } else {
                                 data.moveToFirst();
