@@ -214,6 +214,31 @@ public class MediaUtils {
     }
 
     /**
+     * get Local image width or height
+     *
+     * @param context
+     * @param url
+     * @param call
+     */
+    public static void getImageSize(Context context, String url, OnCallbackListener<MediaExtraInfo> call) {
+        PictureThreadUtils.executeByIo(new PictureThreadUtils.SimpleTask<MediaExtraInfo>() {
+
+            @Override
+            public MediaExtraInfo doInBackground() {
+                return getImageSize(context, url);
+            }
+
+            @Override
+            public void onSuccess(MediaExtraInfo result) {
+                PictureThreadUtils.cancel(this);
+                if (call != null) {
+                    call.onCall(result);
+                }
+            }
+        });
+    }
+
+    /**
      * get Local video width or height
      *
      * @param context
@@ -274,7 +299,11 @@ public class MediaUtils {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            retriever.release();
+            try {
+                retriever.release();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         return mediaExtraInfo;
     }
@@ -302,7 +331,11 @@ public class MediaUtils {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            retriever.release();
+            try {
+                retriever.release();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         return mediaExtraInfo;
     }
