@@ -489,6 +489,9 @@ public class PictureSelectorFragment extends PictureCommonFragment
 
     @Override
     public void handlePermissionSettingResult(String[] permissions) {
+        if (permissions == null){
+            return;
+        }
         onPermissionExplainEvent(false, null);
         boolean isHasCamera = permissions.length > 0 && TextUtils.equals(permissions[0], PermissionConfig.CAMERA[0]);
         boolean isHasPermissions;
@@ -989,8 +992,10 @@ public class PictureSelectorFragment extends PictureCommonFragment
                 totalNum = data.size();
             } else {
                 data = new ArrayList<>(mAdapter.getData());
-                totalNum = SelectedManager.getCurrentLocalMediaFolder().getFolderTotalNum();
-                currentBucketId = SelectedManager.getCurrentLocalMediaFolder().getBucketId();
+                LocalMediaFolder currentLocalMediaFolder = SelectedManager.getCurrentLocalMediaFolder();
+                totalNum = currentLocalMediaFolder != null ? currentLocalMediaFolder.getFolderTotalNum() : data.size();
+                currentBucketId = currentLocalMediaFolder != null ? currentLocalMediaFolder.getBucketId()
+                        : data.size() > 0 ? data.get(0).getBucketId() : PictureConfig.ALL;
             }
             if (!isBottomPreview && config.isPreviewZoomEffect) {
                 BuildRecycleItemViewParams.generateViewParams(mRecycler,
